@@ -1,0 +1,111 @@
+#-----------------------------------------------------------------------
+# This is the makefile for the aphi_comp program.  
+#
+# Possible targets for this descriptor file are aph_exec (the
+# default optimized executable), aph_dbg (a debugging version),
+# clean (to remove *.o), and realclean to also remove the executables.
+#-----------------------------------------------------------------------
+# =================================================
+# TO CHANGE: 
+# replace OBJS with cheb_coll cheb_eval cheb_fit
+# no MODS
+# change executable names to match OBJ files
+# add library paths/directories
+# list of dependencies at bottom of page
+# ================================================
+
+# The following are considered macros.  We'll use them
+# to specify a shell and the compiler and loader programs.
+
+SHELL = /bin/sh
+FCOMP = gfortran
+FLDR = gfortran
+
+# Compiler and loader-option flags are typically listed in
+# separate macros.  The macro with -O3 specifies optimization,
+# while the macro with -g -fbounds-check is used for debugging and
+# runtime checks of array bounds.
+
+FFLAGS = -O3
+FFLAGS_DBG = -g -fbounds-check
+LDRFLAGS = 
+
+# External library paths and libraries can be listed here.
+
+LIBDIR1 = $(HOME)/Documents/ep476/FinalProject/FP_ep476
+LIB1 = tree
+
+#-----------------------------------------------------------------------
+
+# The following macro lists all of the object files that are
+# needed to build the executable.  The "\" signifies
+# that the line is continued.
+OBJS = tree_data_mod.o tree_functions_mod.o 
+DRIVERS = tree_driver
+
+# This is a module-list macro.
+
+MODS = tree_data_mod.mod tree_functions_mod.mod 
+
+#-----------------------------------------------------------------------
+all : clean tree_driver
+
+# The first dependency list is the default, so it should be
+# used for the final executable.  Other dependencies may get
+# invoked in the process of creating the final executable.
+# Note that $(macro) evaluates a macro or an environment variable,
+# and the list of commands or rules follow the dependency.
+
+tree_driver : library
+	@echo "Creating "$@" in directory "$(PWD)"."
+	$(FLDR) $(FFLAGS_DBG) -o $@ $(DRIVERS).f90 $(OBJS) -L$(LIBDIR1) -l$(LIB1)
+
+
+library : $(MODS) $(OBJS)
+	ar -r lib$(LIB1).a $(OBJS)
+	ranlib lib$(LIB1).a
+
+# The following dependency is similar, but it conditionally
+# replaces the value of FFLAGS with FFLAGS_DBG when
+# processing the rules for the target aph_dbg.
+
+# aph_dbg : FFLAGS = $(FFLAGS_DBG)
+# cheb_eval :  $(OBJS)
+#	@echo "Creating "$@" in directory "$(PWD)"."
+#	$(FLDR) -o $@ $(LDRFLAGS) $(OBJS) $(LIBDIR) $(LIBS)
+
+#-----------------------------------------------------------------------
+
+# The following is a static pattern rule that provides
+# instructions for creating object files from the fortran
+# source files.  The older suffix rule would have been ".f.o:"
+
+# The symbol at the end is a macro for the current source file.
+
+$(OBJS) : %.o : %.f90
+	$(FCOMP) $(FFLAGS_DBG) -c $<
+
+$(MODS) : %.mod : %.f90
+	$(FCOMP) $(FFLAGS_DBG) -c $<
+
+#$(MODS) : %.mod : %.f90
+#	$(FCOMP) $(FFLAGS) -c $<
+
+# A list of module dependencies ensures that module information
+# specific to a particular source is available.
+
+#-----------------------------------------------------------------------
+
+# Specifying 'clean' dependencies is also handy.  With no
+# listed dependencies, clean is considered a 'phony' target.
+# The dash in front of a command means to continue even if that
+# command returns a nonzero error code.
+
+clean:
+	-rm *.o
+	@echo "Cleaned object and mod files from "$(PWD)"."
+
+realclean: clean
+	-rm chdriver
+	@echo "Cleaned executables from "$(PWD)"."
+
