@@ -19,6 +19,7 @@
 
 SHELL = /bin/sh
 FCOMP = gfortran
+CPPCOMP = g++
 FLDR = gfortran
 
 # Compiler and loader-option flags are typically listed in
@@ -32,15 +33,21 @@ LDRFLAGS =
 
 # External library paths and libraries can be listed here.
 
-LIBDIR1 = $(HOME)/Documents/ep476/FinalProject/FP_ep476
+LIBDIR1 = $(HOME)/Documents/ep476/FinalProject/FP_ep476 
 LIB1 = tree
+
+MOABDIR = /filespace/groups/cnerg/opt/MOAB/shared-cubit-c12/lib/
+MOABINC = /filespace/groups/cnerg/opt/MOAB/shared-cubit-c12/include/
+MOABLIB = MOAB 
+DAGLIB = dagmc
 
 #-----------------------------------------------------------------------
 
 # The following macro lists all of the object files that are
 # needed to build the executable.  The "\" signifies
 # that the line is continued.
-OBJS = tree_data_mod.o tree_functions_mod.o 
+OBJS = tree_data_mod.o tree_functions_mod.o  
+CPP_OBJS = idagmc
 DRIVERS = tree_driver
 
 # This is a module-list macro.
@@ -58,10 +65,11 @@ all : clean tree_driver
 
 tree_driver : library
 	@echo "Creating "$@" in directory "$(PWD)"."
-	$(FLDR) $(FFLAGS_DBG) -o $@ $(DRIVERS).f90 $(OBJS) -L$(LIBDIR1) -l$(LIB1)
+	$(FLDR) $(FFLAGS_DBG) -o $@ $(DRIVERS).f90 $(OBJS) $(CPP_OBJS).cpp -L$(LIBDIR1) -l$(LIB1) \
+      -L$(MOABDIR) -l$(MOABLIB) -l$(DAGLIB) -I$(MOABINC)
 
 
-library : $(MODS) $(OBJS)
+library : $(MODS) $(OBJS) 
 	ar -r lib$(LIB1).a $(OBJS)
 	ranlib lib$(LIB1).a
 
@@ -84,6 +92,9 @@ library : $(MODS) $(OBJS)
 
 $(OBJS) : %.o : %.f90
 	$(FCOMP) $(FFLAGS_DBG) -c $<
+
+$(CPP_OBJS) : %.o : %.cpp
+	$(CPPCOMP) $(CPPFLAGS_DBG) -c $<
 
 $(MODS) : %.mod : %.f90
 	$(FCOMP) $(FFLAGS_DBG) -c $<
