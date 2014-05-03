@@ -13,7 +13,7 @@ void dagmcinit_(char *cfile, int *clen)
 {
  
   MBErrorCode rval;
-
+  std::cout << cfile << ' ' << *clen << std::endl;
   // terminate all filenames with null char
   cfile[*clen] = '\0';
 
