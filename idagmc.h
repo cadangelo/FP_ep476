@@ -1,6 +1,7 @@
 #ifndef DAGMC_IFACE_H
 #define DAGMC_IFACE_H
 
+#include "MBInterface.hpp"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,6 +22,12 @@ extern "C" {
    */
   void dagmcchkcel_(double *xxx,double *yyy,double *zzz, int *vol, int
 *result);
+
+  /* Funtion to return the number of volumes
+   */
+  int dagmc_num_vol_();
+
+ 
 
 #ifdef __cplusplus
 } // extern "C"
