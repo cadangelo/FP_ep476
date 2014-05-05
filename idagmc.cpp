@@ -61,7 +61,7 @@ void dagmcchkcel_(double *xxx,double *yyy,double *zzz, int *vol_idx, int *result
         *result = 1; // outside== 0  -> outside volume -> result=1
         break;
       case -1:
-        *result = 1; // onboundary== -1 -> on boundary -> result=1 (assume leaving volume)
+        *result = 0; // onboundary== -1 -> on boundary -> result=1 (assume leaving volume)
         break;
       default:
         std::cerr << "Impossible result in dagmcchkcel" << std::endl;
@@ -69,3 +69,10 @@ void dagmcchkcel_(double *xxx,double *yyy,double *zzz, int *vol_idx, int *result
       }
 }
 
+int dagmc_num_vol_()
+{
+   // number of volumes
+   int num_vol = DAG->num_entities(3);
+   return num_vol;
+
+}
