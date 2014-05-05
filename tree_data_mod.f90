@@ -11,6 +11,10 @@ module tree_data_mod
      type(node), pointer :: lchild !points to last child
      type(node), pointer :: rsib   !points to right sibling
      type(node), pointer :: lsib   !points to left sibling
+     type(node), pointer :: cn     !points to current node to test
   end type node
+
+  integer, parameter :: rknd = selected_real_kind(4, 10)
+  integer, parameter :: iknd = selected_int_kind(4)
 
 end module tree_data_mod
