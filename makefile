@@ -46,13 +46,14 @@ DAGLIB = dagmc
 # The following macro lists all of the object files that are
 # needed to build the executable.  The "\" signifies
 # that the line is continued.
-OBJS = tree_data_mod.o tree_functions_mod.o  
+OBJS = tree_data_mod.o volume_data_mod.o \
+       volume_functions_mod.o #insert_in_tree.o  
 CPP_OBJS = idagmc
 DRIVERS = tree_driver
 
 # This is a module-list macro.
 
-MODS = tree_data_mod.mod tree_functions_mod.mod 
+MODS = tree_data_mod.mod  
 
 #-----------------------------------------------------------------------
 all : clean tree_driver
