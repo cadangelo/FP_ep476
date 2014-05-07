@@ -20,8 +20,10 @@ extern "C" {
    * boundary,
    * and result=0 if inside.  
    */
-  void dagmcchkcel_(double *xxx,double *yyy,double *zzz, int *vol, int
-*result);
+  void dagmcchkcel_(double *xxx,double *yyy,double *zzz, int *vol_idx, int *result);
+
+
+  void dagmcpoint_on_surf_(double *xxx, double *yyy, double *zzz, int *vol_idx);
 
   /* Funtion to return the number of volumes
    */
