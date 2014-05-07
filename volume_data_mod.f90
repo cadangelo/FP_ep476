@@ -3,7 +3,7 @@ module volume_data_mod
 
 implicit none
 
-double precision, allocatable :: volume_centroids(:,:) !allocatable array to
-                                                       !store volume centroids
+!allocatable array to store volume surface points
+double precision, allocatable :: volume_surfpoints(:,:)
 
 end module volume_data_mod
