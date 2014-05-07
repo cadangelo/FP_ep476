@@ -15,21 +15,25 @@ module volume_functions_mod
 
     type(node), pointer :: A
     type(node), pointer :: B
-    real(rknd) :: x, y, z
-    integer(iknd) :: inside = 0
+    double precision  :: x, y, z
+    integer(iknd) :: inside
     logical :: is_A_in_B
-
-!    A=>a_tmp
-    write(*,*) 'A_id=', A%id
+    integer(iknd)::ijk
+    write(*,*) 'A = ', A%id
     write(*,*) 'B = ', B%id
 
 
     ! special case then inserting part into top of tree
     if(B%id .eq. 0 )then
-       is_A_in_B=.true.
+       inside=0
     else  
       CALL find_point(A%id, x, y, z)
-      CALL dagmcchkcel(x, y, z, B%id, inside)
+!      do ijk = 1,6
+           ! x=2.0;y=0.0;z=0.0     
+!           write(*,*) 'ijk=', ijk          
+          CALL dagmcchkcel(x, y, z, B%id, inside)
+           write(*,*) 'A, point', A%id,B%id, ijk, x, y, z,inside
+!      enddo
     endif
 
     if (inside .eq. 0) then
@@ -43,13 +47,15 @@ module volume_functions_mod
   
     subroutine find_point(A_id, x, y, z)
    
-    integer :: A_id
-    real(rknd) :: x, y, z
+    integer, intent(in) :: A_id
+    double precision, intent(out) :: x, y, z
 
-    x=volume_centroids(A_id,1)
-    y=volume_centroids(A_id,2)
-    z=volume_centroids(A_id,3)
-       
+    x=volume_surfpoints(A_id,1)
+    y=volume_surfpoints(A_id,2)
+    z=volume_surfpoints(A_id,3)
+    
+ !   CALL dagmcpoint_on_surf(x,y,z,A_id)
+   
     end subroutine find_point
 
 end module volume_functions_mod
