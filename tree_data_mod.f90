@@ -14,7 +14,7 @@ module tree_data_mod
      type(node), pointer :: cn     !points to current node to test
   end type node
 
-  integer, parameter :: rknd = selected_real_kind(4, 10)
-  integer, parameter :: iknd = selected_int_kind(4)
+  integer, parameter :: rknd = selected_real_kind(16, 10)
+  integer, parameter :: iknd = selected_int_kind(16)
 
 end module tree_data_mod
