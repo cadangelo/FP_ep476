@@ -15,7 +15,7 @@ module tree_functions_mod
     integer :: id
     type(node), pointer, intent(inout)  :: new_node
   
-    ALLOCATE(new_node) 
+    allocate(new_node) 
     nullify(new_node%head)
     nullify(new_node%parent)
     nullify(new_node%fchild)
@@ -39,18 +39,19 @@ module tree_functions_mod
     logical :: insertion
 
     write(*,*) 'Calling part_in_cn ...'
-
-    if (cn%fchild%id .gt. 0) then
+      if (associated(cn%fchild)) then
+       write(*,*) 'cn fchild id', cn%fchild%id
        cn => cn%fchild
        insertion = .false.
+       write(*,*) 'cn is now..', cn%id
     else
        part%parent => cn
        cn%fchild => part
        cn%lchild => part
        nullify(part%rsib)
+       nullify(part%lsib)
        nullify(part%fchild)
        nullify(part%lchild)
-       nullify(part%lsib)
        insertion = .true.
     endif
 
@@ -125,7 +126,8 @@ module tree_functions_mod
       insertion = .true.
 
     endif
-
+    write(*,*) 'part, cn', part%id, cn%id
+    write(*,*) 'insertion of cn in part is ...', insertion
 
     end subroutine cn_in_part
 
@@ -140,22 +142,78 @@ module tree_functions_mod
     logical :: insertion
     
     write(*,*) 'Calling cn_part_siblings ...'
-    write (*,*) 'cn rsib id',cn%rsib%id
     
-    if (cn%rsib%id .gt. 0) then 
+    if (associated(cn%rsib)) then 
+      write (*,*) 'cn rsib id',cn%rsib%id
       cn => cn%rsib
     else
       cn%rsib => part
       part%lsib => cn
       nullify(part%rsib)
       part%parent => cn%parent !check this
+      part%parent%lchild => part
       nullify(part%fchild)
       nullify(part%lchild)
       insertion = .true.
     endif
 
-    end subroutine cn_part_siblings
     
+    write(*,*) 'part, cn', part%id, cn%id
+    write(*,*) 'insertion of cn, part sibs is ...', insertion
+
+    end subroutine cn_part_siblings
+
+    subroutine print_tree(node_p)
+    use tree_data_mod
+
+    type(node), pointer, intent(inout) :: node_p
+    type(node), pointer :: node_orig
+
+    node_orig => node_p
+
+    do while( associated(node_p%fchild))
+      write(*,*) 'node ', node_p%id, ' has 1st child ', node_p%fchild%id
+      write(*,*) 'node ', node_p%id, ' has last child ', node_p%lchild%id
+      node_p => node_p%fchild
+    enddo
+
+    node_p => node_orig
+
+    end subroutine
+    
+    subroutine write_tree(head,num_vol)
+!      use tree_data_mod
+!      implicit none
+      type(node), pointer, intent(inout) :: head
+      type(node), pointer                :: orig_head
+      integer :: i,num_vol 
+      write(*,*) 'digraph geometry {' 
+      write(*,*) 'size="6,4"; ratio = fill;'
+      write(*,*) 'node[style=filled];'
+      
+      orig_head => head
+
+      do while (associated(head%fchild))
+            write(*,*) head%id,'->',head%fchild%id,';'
+            head => head%fchild
+      enddo
+
+      head => orig_head
+
+      do while (associated(head%lchild))
+            write(*,*) head%id,'->',head%lchild%id,';'
+            head => head%lchild
+      enddo
+!      write(*,*) ';'
+
+      do i = 1,num_vol
+            write(*,*) i,';'
+      enddo
+
+      write(*,*) '}'
+
+    end subroutine write_tree
+
 end module tree_functions_mod
 
 module tree_insertion_mod
@@ -173,14 +231,12 @@ contains
     
     logical :: insertion ! True if new part inserted into tree 
     logical :: inside    ! T/F result from A in B query
-    !  logical :: is_A_in_B 
     
     
     cn => head
-    
-    write(*,*) cn%id
-    write(*,*) part%id
-    !write(*,*) 'part and head', part%id, head%id 
+   
+    write(*,*) 'cn_id = ', cn%id 
+ 
     insertion = .false.
     
     do while (insertion .eqv. .false.)
@@ -192,10 +248,13 @@ contains
            CALL cn_in_part(cn, part, insertion)
          else
            CALL cn_part_siblings(cn, part, insertion)
-           endif
+         endif
        endif
+
+    call print_tree(head)
        
     end do
+
     
   end subroutine insert_in_tree
 
@@ -226,47 +285,59 @@ integer :: vols, dagmc_num_vol ! number of volumes in geometry
 integer :: i
 integer :: ios ! input/output status
 
-character(len=80) :: filename   ! this is the geometry file
+character(len=80) :: filename   ! name geometry file
 
 write(*,*) "this is what i like"
 
 filename="nested_vol.h5m"
 
-CALL dagmcinit(filename//char(0),len_trim(filename)) ! setup DAG problem
+call dagmcinit(filename//char(0),len_trim(filename)) ! setup DAG problem
 
-ALLOCATE(head)
-head%id=0 ! I am the top of the tree
+! create the head node;
+! it is an imaginary node with id=0
+! it is at the top of the tree and
+! all other nodes are inside it
+!allocate(head)
+call create_node(0, head)
 
+! find the total number of volumes in the geometry
 vols=dagmc_num_vol()
-write (*,*) 'number of volumes is', vols
+write (*,*) 'The number of volumes is', vols
 
-ALLOCATE (volume_centroids(vols,3))
+! allocate an array that contains the x,y,z
+! coordinates of the centroids of the volumes
+allocate (volume_surfpoints(vols,3))
 
-OPEN (UNIT=20,FILE='vol_centroids.txt', STATUS='OLD', &
-!      ACCESS='DIRECT', FORM='FORMATTED',&
-      ERR=20, IOSTAT=ios)
+! open the file containing the centroids
+open (unit=20,file='vol_surf_points.txt', status='old', &
+      err=20, iostat=ios)
 
 do i=1, vols-1
-   read(20,*) volume_centroids(i,1), volume_centroids(i,2), &
-              volume_centroids(i,3)
-   write(*,*) volume_centroids(i,1), volume_centroids(i,2), &
-              volume_centroids(i,3)
+   read(20,*) volume_surfpoints(i,1), volume_surfpoints(i,2), &
+              volume_surfpoints(i,3)
+   write(*,*) i, volume_surfpoints(i,1), volume_surfpoints(i,2), &
+              volume_surfpoints(i,3)
 end do
 close (20)
 
-!ALLOCATE(tmp_node)
-!id=0
 
 
-DO i=1, vols-1
+do i=1, vols-1
 
- ALLOCATE(tmp_node)
- CALL create_node(i,tmp_node)
- write(*,*) tmp_node%id,head%id
- CALL insert_in_tree(tmp_node, head)
-END DO
+ allocate(tmp_node)
+ call create_node(i,tmp_node)
+ write(*,*) 'new node, head', tmp_node%id,head%id
+ call insert_in_tree(tmp_node, head)
+
+end do
+
+call print_tree(head)
+
+call write_tree(head,vols-1)
+
 stop
-20 write(*,*) 'could not open vol_centroids.txt'
+
+20 write(*,*) 'could not open vol_surf_points.txt'
 
 end program tree_driver
 
