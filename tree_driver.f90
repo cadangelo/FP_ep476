@@ -7,15 +7,24 @@ module tree_functions_mod
   use tree_data_mod
   
   contains  
+
     subroutine create_node(id, new_node)
     
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! This subroutine allocates space for the new node being 
+    ! inserted into the tree.  It also nullifies all of the 
+    ! new node's associations
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     use tree_data_mod
+    
     implicit none
 
-    integer :: id
-    type(node), pointer, intent(inout)  :: new_node
+    integer :: id   ! ID of the new node
+    type(node), pointer, intent(inout)  :: new_node 
   
     allocate(new_node) 
+
     nullify(new_node%head)
     nullify(new_node%parent)
     nullify(new_node%fchild)
@@ -24,81 +33,131 @@ module tree_functions_mod
     nullify(new_node%lsib)
     nullify(new_node%cn)
 
+    ! Set the new node's ID 
     new_node%id=id
   
     return  
     end subroutine create_node
     
+
     subroutine part_in_cn(cn, part, insertion)
-  
+    
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! This subroutine is called when the new node being inserted 
+    ! into the tree, part, is found to be INSIDE of the
+    ! current node being tested against, cn. 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     use tree_data_mod
 
-    type(node), pointer, intent(inout)  :: part 
-    type(node), pointer, intent(inout) :: cn
+    type(node), pointer, intent(inout) :: part ! node being inserted
+    type(node), pointer, intent(inout) :: cn ! node part tested against
   
-    logical :: insertion
 
+    logical :: insertion ! if insertion is true, the new node (part)
+                         ! has successfully been inserted in the tree
+    
     write(*,*) 'Calling part_in_cn ...'
-      if (associated(cn%fchild)) then
-       write(*,*) 'cn fchild id', cn%fchild%id
-       cn => cn%fchild
-       insertion = .false.
-       write(*,*) 'cn is now..', cn%id
+    
+    ! If the current node already has a child, we need to find part's 
+    ! relation to the child node. So- that child node becomes the new
+    ! cn to test against. 
+    if (associated(cn%fchild)) then
+    
+      write(*,*) 'cn fchild id', cn%fchild%id
+      cn => cn%fchild
+    
+      insertion = .false.
+      write(*,*) 'cn is now..', cn%id
+
+    ! If the current node does not have any children yet, part becomes
+    ! cn's child. Part is now successfully inserted into the tree.
     else
-       part%parent => cn
-       cn%fchild => part
-       cn%lchild => part
-       nullify(part%rsib)
-       nullify(part%lsib)
-       nullify(part%fchild)
-       nullify(part%lchild)
-       insertion = .true.
+    
+      part%parent => cn
+      cn%fchild => part
+      cn%lchild => part
+     
+      nullify(part%rsib)
+      nullify(part%lsib)
+      nullify(part%fchild)
+      nullify(part%lchild)
+    
+      insertion = .true.
+
     endif
 
-    write(*,*) 'insertion is ...', insertion
+    write(*,*) 'insertion of part in cn is ...', insertion
+    
     end subroutine part_in_cn
 
 
     subroutine cn_in_part(cn, part, insertion)
   
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! This subroutine is called when the new node being inserted 
+    ! into the tree, part, is found to be OUTSIDE of the
+    ! current node being tested against, cn. 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   
     use tree_data_mod
-
-    type(node), pointer, intent(inout)  :: part 
-    type(node), pointer, intent(inout) :: cn
+    
+    type(node), pointer, intent(inout) :: part ! node being inserted
+    type(node), pointer, intent(inout) :: cn ! node part tested against
   
-    logical :: insertion
+    logical :: insertion ! if insertion is true, the new node (part)
+                         ! has successfully been inserted in the tree
 
     write(*,*) 'Calling cn_in_part ...'
 
-    if (cn%parent%fchild%id .eq. cn%id) then
 
-      ! cn is only child
+    ! The insertion of part differs depending on the status of cn.
+    ! cn can be an only child, a first child, a middle child,
+    ! or the last child of it's parent.    
+
+    ! First check to see if cn is a first child.
+    if (cn%parent%fchild%id .eq. cn%id) then
+ 
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      ! If cn is a first child and also a last child,
+      ! if must be an only child.
       if (cn%parent%lchild%id .eq. cn%id) then
-        cn%parent%fchild => part
+
+        cn%parent%fchild => part ! part becomes child of cn's parent 
         cn%parent%lchild => part
-        part%parent => cn%parent
-        part%fchild => cn
+        part%parent => cn%parent 
+
+        part%fchild => cn        ! cn becomes child of part
         part%lchild => cn
         cn%parent => part
+
         nullify(part%lsib)
         nullify(part%rsib)
+
         insertion = .true.
 
-      ! cn is first child
+      ! If cn is a first child, but not a last child, it has siblings
+      ! that need to be tested against.
       else
-        cn%parent%fchild => cn%rsib
-        part%parent => cn%parent
-        cn%parent%lchild%rsib => part
-        part%lsib => cn%parent%lchild
-        part%fchild => cn
+        cn%parent%fchild => cn%rsib ! cn's sibling becomes first child
+
+        part%parent => cn%parent       ! part is added to the end of the
+        cn%parent%lchild%rsib => part  ! list of siblings
+        part%lsib => cn%parent%lchild  
+
+        part%fchild => cn  ! cn becomes child of part
         part%lchild => cn
         cn%parent => part
-        cn => cn%rsib
+
+        cn => cn%rsib      ! cn's sibling is the new cn to test agains
+
         nullify(cn%lsib%rsib)
         nullify(cn%lsib)
-      endif
 
-    ! cn is last child
+      endif
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! If cn is not a first child, check to see if it's the last child
     elseif (cn%parent%lchild%id .eq. cn%id) then 
       cn%parent%lchild => part
       part%parent => cn%parent
@@ -163,57 +222,82 @@ module tree_functions_mod
 
     end subroutine cn_part_siblings
 
-    subroutine print_tree(node_p)
-    use tree_data_mod
-
-    type(node), pointer, intent(inout) :: node_p
-    type(node), pointer :: node_orig
-
-    node_orig => node_p
-
-    do while( associated(node_p%fchild))
-      write(*,*) 'node ', node_p%id, ' has 1st child ', node_p%fchild%id
-      write(*,*) 'node ', node_p%id, ' has last child ', node_p%lchild%id
-      node_p => node_p%fchild
-    enddo
-
-    node_p => node_orig
-
-    end subroutine
-    
     subroutine write_tree(head,num_vol)
-!      use tree_data_mod
-!      implicit none
+
       type(node), pointer, intent(inout) :: head
       type(node), pointer                :: orig_head
-      integer :: i,num_vol 
-      write(*,*) 'digraph geometry {' 
-      write(*,*) 'size="6,4"; ratio = fill;'
-      write(*,*) 'node[style=filled];'
-      
+      integer :: i,num_vol, num_parents
+      logical :: p_sib=.false.
+      !character(len=10) :: tree_graph, replace 
+
+      open(unit=10, file='tree_graph.dot', status='replace')
+      write(10, fmt=*)'digraph geometry {' 
+      write(10, fmt=*)'size="6,4"; ratio = fill;'
+      write(10, fmt=*)'node[style=filled];'
+      num_parents=0
       orig_head => head
+      write(*,*) 'i am printing stuff'
 
       do while (associated(head%fchild))
-            write(*,*) head%id,'->',head%fchild%id,';'
+            write(*,*) 'blah'
+            write(10, fmt=*) head%id,'->',head%fchild%id, &
+                              '[color="blue4"];'
+            write(10, fmt=*) head%id,'->',head%lchild%id, &
+                             '[color="deepskyblue"];'
+            write(10, fmt=*) '{ rank=same;', head%fchild%id, &
+                                             head%lchild%id, '}'
+            if (associated(head%parent)) then
+            write(10, fmt=*) head%id,'->',head%parent%id, &
+                       '[color="crimson"];'
+            end if
             head => head%fchild
       enddo
+      
+      write(10, fmt=*) head%id,'->',head%parent%id, &
+                       '[color="crimson"];'
 
-      head => orig_head
-
-      do while (associated(head%lchild))
-            write(*,*) head%id,'->',head%lchild%id,';'
-            head => head%lchild
-      enddo
-!      write(*,*) ';'
+       head=> orig_head%fchild 
+       do while (p_sib .eqv. .false.)
+         if (.not. associated(head%rsib)) then
+           p_sib=.false.
+           if (associated (head%fchild)) then
+             head=>head%fchild
+           else
+             p_sib=.true.
+           end if
+         else
+           do while (associated(head%rsib))
+             write(10, fmt=*) head%id,'->',head%rsib%id, &
+                         '[color="darkorchid4"];'
+             write(10, fmt=*) head%rsib%id,'->',head%parent%id, &
+                         '[color="crimson"];'
+             !if (associated(head%lsib)) then
+               write(10, fmt=*) head%rsib%id,'->',head%id, &
+                          '[color="darkorchid1"];'
+            ! end if
+             write(*,*)'head,lsib', head%id,head%lsib%id
+                  
+           !  write(10, fmt=*) '{ rank=same;', head%lsib%id, &
+            !                                head%rsib%id, '}'
+             head=>head%rsib
+           end do
+           if(associated(head%parent%fchild%fchild)) then
+             head=>head%parent%fchild%fchild
+           else
+             p_sib=.true.
+           end if
+        end if
+      end do
 
       do i = 1,num_vol
-            write(*,*) i,';'
+            write(10, fmt=*) i,';'
       enddo
 
-      write(*,*) '}'
-
+      write(10, fmt=*) '}'
+      
+      close(10)
     end subroutine write_tree
-
+    
 end module tree_functions_mod
 
 module tree_insertion_mod
@@ -251,7 +335,7 @@ contains
          endif
        endif
 
-    call print_tree(head)
+    !call print_tree(head)
        
     end do
 
@@ -298,7 +382,7 @@ call dagmcinit(filename//char(0),len_trim(filename)) ! setup DAG problem
 ! it is at the top of the tree and
 ! all other nodes are inside it
 !allocate(head)
-call create_node(0, head)
+call create_node(100, head)
 
 ! find the total number of volumes in the geometry
 vols=dagmc_num_vol()
@@ -331,7 +415,7 @@ do i=1, vols-1
 
 end do
 
-call print_tree(head)
+!call print_tree(head)
 
 call write_tree(head,vols-1)
 
