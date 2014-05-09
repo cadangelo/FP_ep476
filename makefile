@@ -47,7 +47,8 @@ DAGLIB = dagmc
 # needed to build the executable.  The "\" signifies
 # that the line is continued.
 OBJS = tree_data_mod.o volume_data_mod.o \
-       volume_functions_mod.o #insert_in_tree.o  
+       volume_functions_mod.o  \
+       print_tree.o #write_tree.o #insert_in_tree.o  
 CPP_OBJS = idagmc
 DRIVERS = tree_driver
 
