@@ -24,16 +24,12 @@ module volume_functions_mod
 
 
     ! special case then inserting part into top of tree
-    if(B%id .eq. 0 )then
+    if(B%id .eq. 100 )then
        inside=0
     else  
       CALL find_point(A%id, x, y, z)
-!      do ijk = 1,6
-           ! x=2.0;y=0.0;z=0.0     
-!           write(*,*) 'ijk=', ijk          
-          CALL dagmcchkcel(x, y, z, B%id, inside)
-           write(*,*) 'A, point', A%id,B%id, ijk, x, y, z,inside
-!      enddo
+      CALL dagmcchkcel(x, y, z, B%id, inside)
+!           write(*,*) 'A, point', A%id,B%id, ijk, x, y, z,inside
     endif
 
     if (inside .eq. 0) then
@@ -54,7 +50,6 @@ module volume_functions_mod
     y=volume_surfpoints(A_id,2)
     z=volume_surfpoints(A_id,3)
     
- !   CALL dagmcpoint_on_surf(x,y,z,A_id)
    
     end subroutine find_point
 
