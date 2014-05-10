@@ -91,7 +91,6 @@ module tree_functions_mod
     
     end subroutine part_in_cn
 
-
     subroutine cn_in_part(cn, part, insertion)
   
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,92 +105,69 @@ module tree_functions_mod
     type(node), pointer, intent(inout) :: cn ! node part tested against
   
     logical :: insertion ! if insertion is true, the new node (part)
-                         ! has successfully been inserted in the tree
-
+    logical :: check_sibs=.false.
     write(*,*) 'Calling cn_in_part ...'
-
-
-    ! The insertion of part differs depending on the status of cn.
-    ! cn can be an only child, a first child, a middle child,
-    ! or the last child of it's parent.    
-
-    ! First check to see if cn is a first child.
-    if (cn%parent%fchild%id .eq. cn%id) then
- 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! If cn is a first child and also a last child,
-      ! if must be an only child.
-      if (cn%parent%lchild%id .eq. cn%id) then
-
-        cn%parent%fchild => part ! part becomes child of cn's parent 
-        cn%parent%lchild => part
-        part%parent => cn%parent 
-
-        part%fchild => cn        ! cn becomes child of part
-        part%lchild => cn
-        cn%parent => part
-
-        nullify(part%lsib)
-        nullify(part%rsib)
-
-        insertion = .true.
-
-      ! If cn is a first child, but not a last child, it has siblings
-      ! that need to be tested against.
-      else
-        cn%parent%fchild => cn%rsib ! cn's sibling becomes first child
-
-        part%parent => cn%parent       ! part is added to the end of the
-        cn%parent%lchild%rsib => part  ! list of siblings
-        part%lsib => cn%parent%lchild  
-
-        part%fchild => cn  ! cn becomes child of part
-        part%lchild => cn
-        cn%parent => part
-
-        cn => cn%rsib      ! cn's sibling is the new cn to test agains
-
-        nullify(cn%lsib%rsib)
-        nullify(cn%lsib)
-
-      endif
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! If cn is not a first child, check to see if it's the last child
-    elseif (cn%parent%lchild%id .eq. cn%id) then 
-      cn%parent%lchild => part
-      part%parent => cn%parent
-      cn%parent => part
-      cn%lsib%rsib => part
-      part%lsib => cn%lsib
-      part%fchild => cn
-      part%lchild => cn
-      nullify(cn%lsib)
-      nullify(cn%rsib)
-      insertion = .true.
-    
-    ! cn is a middle child
-    else
-      cn%rsib%lsib => cn%lsib
-      cn%lsib%rsib => cn%rsib
-      cn%parent%lchild%rsib => part
-      part%lsib => cn%parent%lchild !check this
-      cn%parent%lchild => part
-      part%parent => cn%parent
-      part%fchild => cn
-      part%lchild => cn
-      cn%parent => part
-      nullify(part%rsib) 
-      insertion = .true.
-
-    endif
     write(*,*) 'part, cn', part%id, cn%id
-    write(*,*) 'insertion of cn in part is ...', insertion
+    if (associated(part%fchild)) then
+     write(*,*) 'part, fchild', part%id, part%fchild%id
+     write(*,*) 'part, lchild', part%id, part%lchild%id
+    end if
+    !!!!!!!!!!!!!! parent changes !!!!!!!!!!!!!!!!!!!!!!!!
+    part%parent=>cn%parent
+    if(cn%parent%fchild%id .eq. cn%id) then
+      !if (associated (cn%rsib)) then
+        cn%parent%fchild=>cn%rsib
+        !check_sibs=.true.
+      !end if  
+    end if
+    if (cn%parent%lchild%id .eq. cn%id) then
+     ! if (associated (cn%lsib)) then
+        cn%parent%lchild => cn%lsib
+        !check_sibs=.false.
+     ! end if
+    end if 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    if (associated(cn%rsib)) then
+      !if (associated(cn%lsib)) then
+      cn%rsib%lsib => cn%lsib
+      !else
+      !nullify(cn%lsib%rsib)
+      check_sibs=.true.
+    end if
+    if (associated(cn%lsib)) then
+      cn%lsib%rsib=>cn%rsib
+    end if
+    nullify(cn%rsib)
+    nullify(cn%lsib)
 
-    end subroutine cn_in_part
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   
+   cn%parent => part
+   cn%lsib=> part%lchild
 
+   if (associated(part%lchild)) then
+     part%lchild%rsib=>cn
+   else
+     part%fchild=>cn
+   end if  
 
-    subroutine cn_part_siblings(cn, part, insertion)
+   part%lchild=>cn
+   
+   
+   insertion = .true.   
+  
+   if (check_sibs .eqv. .true.) then
+     cn=>part%parent%fchild
+     insertion=.false.  
+   end if
+  
+   write(*,*)    
+   write(*,*) 'insertion', insertion
+   write(*,*) 'cn is now', cn%id
+   end subroutine cn_in_part
+
+   subroutine cn_part_siblings(cn, part, insertion)
   
     use tree_data_mod
 
@@ -222,13 +198,30 @@ module tree_functions_mod
 
     end subroutine cn_part_siblings
 
+    subroutine print_tree(node_p)
+      use tree_data_mod
+
+      type(node), pointer, intent(inout) :: node_p
+      type(node), pointer :: node_orig
+
+      node_orig => node_p
+
+      do while( associated(node_p%fchild))
+        write(*,*) 'node ', node_p%id, ' has 1st child ', node_p%fchild%id
+        write(*,*) 'node ', node_p%id, ' has last child ', node_p%lchild%id
+        node_p => node_p%fchild
+      enddo
+
+      node_p => node_orig
+
+    end subroutine print_tree
+    
     subroutine write_tree(head,num_vol)
 
       type(node), pointer, intent(inout) :: head
       type(node), pointer                :: orig_head
       integer :: i,num_vol, num_parents
       logical :: p_sib=.false.
-      !character(len=10) :: tree_graph, replace 
 
       open(unit=10, file='tree_graph.dot', status='replace')
       write(10, fmt=*)'digraph geometry {' 
@@ -256,36 +249,41 @@ module tree_functions_mod
       write(10, fmt=*) head%id,'->',head%parent%id, &
                        '[color="crimson"];'
 
-       head=> orig_head%fchild 
-       do while (p_sib .eqv. .false.)
-         if (.not. associated(head%rsib)) then
-           p_sib=.false.
-           if (associated (head%fchild)) then
-             head=>head%fchild
-           else
-             p_sib=.true.
-           end if
-         else
-           do while (associated(head%rsib))
-             write(10, fmt=*) head%id,'->',head%rsib%id, &
+      head=> orig_head%fchild 
+      
+      do while (p_sib .eqv. .false.)
+        if (.not. associated(head%rsib)) then
+          !p_sib=.false.
+          if (associated (head%fchild)) then
+            head=>head%fchild
+          else
+            p_sib=.true.
+          end if
+
+        else
+          do while (associated(head%rsib))
+            write(*,*)'head,rsib', head%id,head%rsib%id
+            write(10, fmt=*) head%id,'->',head%rsib%id, &
                          '[color="darkorchid4"];'
-             write(10, fmt=*) head%rsib%id,'->',head%parent%id, &
+            write(10, fmt=*) head%rsib%id,'->',head%parent%id, &
                          '[color="crimson"];'
-             !if (associated(head%lsib)) then
-               write(10, fmt=*) head%rsib%id,'->',head%id, &
+            write(10, fmt=*) head%rsib%id,'->',head%id, &
                           '[color="darkorchid1"];'
-            ! end if
-             write(*,*)'head,lsib', head%id,head%lsib%id
+            !write(*,*)'head,lsib', head%id,head%lsib%id
+            if (associated(head%fchild)) then
+              write(10, fmt=*) head%id,'->',head%fchild%id, &
+                          '[color="deepskyblue"];'
+            end if
                   
-           !  write(10, fmt=*) '{ rank=same;', head%lsib%id, &
-            !                                head%rsib%id, '}'
-             head=>head%rsib
-           end do
-           if(associated(head%parent%fchild%fchild)) then
-             head=>head%parent%fchild%fchild
-           else
-             p_sib=.true.
-           end if
+            head=>head%rsib
+          end do
+          
+          if(associated(head%parent%fchild%fchild)) then
+            head=>head%parent%fchild%fchild
+          else
+            p_sib=.true.
+          end if
+
         end if
       end do
 
@@ -335,7 +333,7 @@ contains
          endif
        endif
 
-    !call print_tree(head)
+    call print_tree(head)
        
     end do
 
@@ -373,7 +371,7 @@ character(len=80) :: filename   ! name geometry file
 
 write(*,*) "this is what i like"
 
-filename="nested_vol.h5m"
+filename="nested_vol_2.h5m"
 
 call dagmcinit(filename//char(0),len_trim(filename)) ! setup DAG problem
 
@@ -393,7 +391,7 @@ write (*,*) 'The number of volumes is', vols
 allocate (volume_surfpoints(vols,3))
 
 ! open the file containing the centroids
-open (unit=20,file='vol_surf_points.txt', status='old', &
+open (unit=20,file='vol_surf_points_2.txt', status='old', &
       err=20, iostat=ios)
 
 do i=1, vols-1
@@ -415,9 +413,9 @@ do i=1, vols-1
 
 end do
 
-!call print_tree(head)
+call print_tree(head)
 
-call write_tree(head,vols-1)
+!call write_tree(head,vols-1)
 
 stop
 
