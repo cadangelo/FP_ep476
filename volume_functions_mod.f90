@@ -18,7 +18,7 @@ module volume_functions_mod
     double precision  :: x, y, z
     integer(iknd) :: inside
     logical :: is_A_in_B
-    integer(iknd)::ijk
+    !integer(iknd)::ijk
     write(*,*) 'A = ', A%id
     write(*,*) 'B = ', B%id
 
@@ -28,8 +28,10 @@ module volume_functions_mod
        inside=0
     else  
       CALL find_point(A%id, x, y, z)
+           write(*,*) 'b4 dagchkcel A,B, point,inside',&
+                        A%id,B%id, x, y, z,inside
       CALL dagmcchkcel(x, y, z, B%id, inside)
-!           write(*,*) 'A, point', A%id,B%id, ijk, x, y, z,inside
+           write(*,*) 'A, point', A%id,B%id, x, y, z,inside
     endif
 
     if (inside .eq. 0) then
