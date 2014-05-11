@@ -62,22 +62,22 @@ module tree_functions_mod
     ! If the current node already has a child, we need to find part's 
     ! relation to the child node. So- that child node becomes the new
     ! cn to test against. 
-    if (associated(cn%fchild)) then
+ !   if (associated(cn%fchild)) then
     
-      write(*,*) 'cn fchild id', cn%fchild%id
-      cn => cn%fchild
+  !    write(*,*) 'cn fchild id', cn%fchild%id
+   !   cn => cn%fchild
     
-      insertion = .false.
-      write(*,*) 'cn is now..', cn%id
+    !  insertion = .false.
+    !  write(*,*) 'cn is now..', cn%id
 
     ! If the current node does not have any children yet, part becomes
     ! cn's child. Part is now successfully inserted into the tree.
-    else
+  !  else
     
-      part%parent => cn
-      cn%fchild => part
-      cn%lchild => part
-     
+   !   part%parent => cn
+    !  cn%fchild => part
+     ! cn%lchild => part
+      CALL insert_node(part, cn)
       nullify(part%rsib)
       nullify(part%lsib)
       nullify(part%fchild)
@@ -85,18 +85,18 @@ module tree_functions_mod
     
       insertion = .true.
 
-    endif
+   ! endif
 
     write(*,*) 'insertion of part in cn is ...', insertion
     
     end subroutine part_in_cn
 
-    subroutine cn_in_part(cn, part, insertion)
+    subroutine extract_node(cn, part)
   
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! This subroutine is called when the new node being inserted 
-    ! into the tree, part, is found to be OUTSIDE of the
-    ! current node being tested against, cn. 
+    ! 
+    !  
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    
     use tree_data_mod
@@ -105,26 +105,20 @@ module tree_functions_mod
     type(node), pointer, intent(inout) :: cn ! node part tested against
   
     logical :: insertion ! if insertion is true, the new node (part)
-    logical :: check_sibs=.false.
-    write(*,*) 'Calling cn_in_part ...'
-    write(*,*) 'part, cn', part%id, cn%id
-    if (associated(part%fchild)) then
-     write(*,*) 'part, fchild', part%id, part%fchild%id
-     write(*,*) 'part, lchild', part%id, part%lchild%id
-    end if
+  
     !!!!!!!!!!!!!! parent changes !!!!!!!!!!!!!!!!!!!!!!!!
     part%parent=>cn%parent
     if(cn%parent%fchild%id .eq. cn%id) then
       !if (associated (cn%rsib)) then
         cn%parent%fchild=>cn%rsib
-        !check_sibs=.true.
       !end if  
     end if
     if (cn%parent%lchild%id .eq. cn%id) then
      ! if (associated (cn%lsib)) then
         cn%parent%lchild => cn%lsib
-        !check_sibs=.false.
      ! end if
+      !cn%parent%lchild%rsib => part
+      !part%lsib=>cn%parent%lchild
     end if 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
@@ -133,39 +127,46 @@ module tree_functions_mod
       cn%rsib%lsib => cn%lsib
       !else
       !nullify(cn%lsib%rsib)
-      check_sibs=.true.
     end if
     if (associated(cn%lsib)) then
       cn%lsib%rsib=>cn%rsib
     end if
     nullify(cn%rsib)
     nullify(cn%lsib)
+    
+    end subroutine extract_node
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   
-   cn%parent => part
-   cn%lsib=> part%lchild
-
-   if (associated(part%lchild)) then
-     part%lchild%rsib=>cn
-   else
-     part%fchild=>cn
-   end if  
-
-   part%lchild=>cn
-   
-   
-   insertion = .true.   
+    subroutine insert_node(node_a, node_b)
   
-   if (check_sibs .eqv. .true.) then
-     cn=>part%parent%fchild
-     insertion=.false.  
-   end if
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! This subroutine is called when node_a needs to be inserted in
+    ! node_b
+    !  
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   
+    use tree_data_mod
+    
+    type(node), pointer, intent(inout) :: node_b 
+    type(node), pointer, intent(inout) :: node_a 
   
-   write(*,*)    
-   write(*,*) 'insertion', insertion
-   write(*,*) 'cn is now', cn%id
-   end subroutine cn_in_part
+    logical :: insertion ! if insertion is true, the new node (part)
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   
+    node_a%parent => node_b
+    node_a%lsib=> node_b%lchild
+
+    if (associated(node_b%lchild)) then
+      node_b%lchild%rsib=>node_a
+      nullify(node_a%rsib)
+    else
+      node_b%fchild=>node_a
+    end if  
+
+    node_b%lchild=>node_a
+   
+    end subroutine insert_node
+    
 
    subroutine cn_part_siblings(cn, part, insertion)
   
@@ -310,6 +311,7 @@ contains
     type(node), pointer, intent(inout) :: head
     type(node), pointer, intent(inout) :: part 
     type(node), pointer :: cn
+    type(node), pointer :: next_cn
     
     logical :: insertion ! True if new part inserted into tree 
     logical :: inside    ! T/F result from A in B query
@@ -324,13 +326,41 @@ contains
     do while (insertion .eqv. .false.)
        
        if ( is_A_in_B(part, cn) .eqv. .true. ) then
-         CALL part_in_cn(cn, part, insertion)
-       else 
-         if ( is_A_in_B(cn, part) .eqv. .true. ) then 
-           CALL cn_in_part(cn, part, insertion)
+         if (associated(cn%fchild)) then
+            cn=>cn%fchild
+            insertion=.false.
+         else
+           CALL part_in_cn(cn, part, insertion)
+           insertion=.true.
+         endif
+         
+       elseif ( is_A_in_B(cn, part) .eqv. .true. ) then
+           next_cn=>cn%rsib 
+           write(*,*) 'cn is ', cn%id
+           CALL extract_node(cn,part)
+           write(*,*) 'part, part%p, part%p%fc', part%id,&
+              part%parent%id, part%parent%fchild%id
+           write(*,*) 'cn%par rels', cn%id, &
+                        cn%parent%fchild%id, cn%parent%lchild%id
+           CALL insert_node(cn,part)
+           write(*,*)'after insert,part,part%p%fc, part%p%lc',&
+               part%id, part%parent%fchild%id,  part%parent%lchild%id
+          ! CALL cn_in_part(cn, part, insertion)
+           insertion=.true.
+           if (associated(next_cn)) then
+             cn=>next_cn
+             insertion=.false.
+           end if
+          write(*,*) 'after cn in part stuff, next_cn,cn', &
+                      next_cn%id, cn%id
+       else
+         if (associated(cn%rsib)) then
+           cn=>cn%rsib
+           insertion=.false.
          else
            CALL cn_part_siblings(cn, part, insertion)
-         endif
+           insertion=.true.
+         end if
        endif
 
     call print_tree(head)
