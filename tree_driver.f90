@@ -91,7 +91,7 @@ module tree_functions_mod
     
     end subroutine part_in_cn
 
-    subroutine extract_node(cn, part)
+    subroutine extract_node(cn)
   
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! This subroutine is called when the new node being inserted 
@@ -101,39 +101,30 @@ module tree_functions_mod
    
     use tree_data_mod
     
-    type(node), pointer, intent(inout) :: part ! node being inserted
     type(node), pointer, intent(inout) :: cn ! node part tested against
   
     logical :: insertion ! if insertion is true, the new node (part)
   
     !!!!!!!!!!!!!! parent changes !!!!!!!!!!!!!!!!!!!!!!!!
-    part%parent=>cn%parent
     if(cn%parent%fchild%id .eq. cn%id) then
-      !if (associated (cn%rsib)) then
         cn%parent%fchild=>cn%rsib
-      !end if  
     end if
     if (cn%parent%lchild%id .eq. cn%id) then
-     ! if (associated (cn%lsib)) then
         cn%parent%lchild => cn%lsib
-     ! end if
-      !cn%parent%lchild%rsib => part
-      !part%lsib=>cn%parent%lchild
     end if 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     if (associated(cn%rsib)) then
-      !if (associated(cn%lsib)) then
       cn%rsib%lsib => cn%lsib
-      !else
-      !nullify(cn%lsib%rsib)
     end if
     if (associated(cn%lsib)) then
       cn%lsib%rsib=>cn%rsib
     end if
+    
     nullify(cn%rsib)
     nullify(cn%lsib)
-    
+    nullify(cn%parent)
+
     end subroutine extract_node
 
     subroutine insert_node(node_a, node_b)
@@ -188,8 +179,8 @@ module tree_functions_mod
       nullify(part%rsib)
       part%parent => cn%parent !check this
       part%parent%lchild => part
-      nullify(part%fchild)
-      nullify(part%lchild)
+      !nullify(part%fchild)
+      !nullify(part%lchild)
       insertion = .true.
     endif
 
@@ -217,74 +208,36 @@ module tree_functions_mod
 
     end subroutine print_tree
     
-    subroutine write_tree(head,num_vol)
+    subroutine write2graph(node_p)
 
-      type(node), pointer, intent(inout) :: head
-      type(node), pointer                :: orig_head
-      integer :: i,num_vol, num_parents
-      logical :: p_sib=.false.
+      type(node), pointer, intent(inout) :: node_p
+      type(node), pointer                :: cn
+      integer :: i
 
-      open(unit=10, file='tree_graph.dot', status='replace')
+      open(unit=10, file='tree.dot', status='replace')
       write(10, fmt=*)'digraph geometry {' 
       write(10, fmt=*)'size="6,4"; ratio = fill;'
       write(10, fmt=*)'node[style=filled];'
-      num_parents=0
-      orig_head => head
-      write(*,*) 'i am printing stuff'
-
-      do while (associated(head%fchild))
-            write(*,*) 'blah'
-            write(10, fmt=*) head%id,'->',head%fchild%id, &
-                              '[color="blue4"];'
-            write(10, fmt=*) head%id,'->',head%lchild%id, &
-                             '[color="deepskyblue"];'
-            write(10, fmt=*) '{ rank=same;', head%fchild%id, &
-                                             head%lchild%id, '}'
-            if (associated(head%parent)) then
-            write(10, fmt=*) head%id,'->',head%parent%id, &
-                       '[color="crimson"];'
-            end if
-            head => head%fchild
-      enddo
       
-      write(10, fmt=*) head%id,'->',head%parent%id, &
-                       '[color="crimson"];'
-
-      head=> orig_head%fchild 
-      
-      do while (p_sib .eqv. .false.)
-        if (.not. associated(head%rsib)) then
-          !p_sib=.false.
-          if (associated (head%fchild)) then
-            head=>head%fchild
-          else
-            p_sib=.true.
-          end if
-
+      cn => node_p
+      do while (associated(cn))
+        CALL node2dot(cn) 
+        if (associated(cn%fchild)) then
+          cn=>cn%fchild
         else
-          do while (associated(head%rsib))
-            write(*,*)'head,rsib', head%id,head%rsib%id
-            write(10, fmt=*) head%id,'->',head%rsib%id, &
-                         '[color="darkorchid4"];'
-            write(10, fmt=*) head%rsib%id,'->',head%parent%id, &
-                         '[color="crimson"];'
-            write(10, fmt=*) head%rsib%id,'->',head%id, &
-                          '[color="darkorchid1"];'
-            !write(*,*)'head,lsib', head%id,head%lsib%id
-            if (associated(head%fchild)) then
-              write(10, fmt=*) head%id,'->',head%fchild%id, &
-                          '[color="deepskyblue"];'
-            end if
-                  
-            head=>head%rsib
-          end do
-          
-          if(associated(head%parent%fchild%fchild)) then
-            head=>head%parent%fchild%fchild
+          if (associated (cn%rsib)) then
+            cn=>cn%rsib
           else
-            p_sib=.true.
+            do while (associated(cn%parent) .and. &
+                      .not.  associated(cn%parent%rsib))
+              cn=>cn%parent
+            end do
+            if (associated(cn%parent)) then
+              cn=>cn%parent%rsib
+            else
+              nullify(cn)
+            end if
           end if
-
         end if
       end do
 
@@ -295,8 +248,42 @@ module tree_functions_mod
       write(10, fmt=*) '}'
       
       close(10)
-    end subroutine write_tree
     
+    end subroutine write2graph
+
+    subroutine node2dot (node_p)
+     
+     type(node), pointer, intent(inout) :: node_p
+
+     if (associated(node_p%parent)) then
+     write(10, fmt=*) node_p%id,'->',node_p%parent%id, &
+                       '[color="crimson"];'
+     end if
+     
+     if (associated(node_p%fchild)) then
+     write(10, fmt=*) node_p%id,'->',node_p%fchild%id, &
+                       '[color="blue4"];'
+     write(10, fmt=*) node_p%id,'->',node_p%lchild%id, &
+                       '[color="deepskyblue"];'
+     write(10, fmt=*) '{rank=same;', node_p%fchild%id, &
+                                     node_p%lchild%id, '}'
+     end if
+     
+    
+     if (associated(node_p%rsib)) then
+     write(10, fmt=*) node_p%id,'->',node_p%rsib%id, &
+                       '[color="darkorchid4"];'
+     write(10, fmt=*) '{rank=same;', node_p%id, &
+                                     node_p%rsib%id, '}'
+     end if
+     
+     if (associated(node_p%lsib)) then
+     write(10, fmt=*) node_p%id,'->',node_p%lsib%id, &
+                       '[color="darkorchid1"];'
+     end if
+     
+    end subroutine node2dot
+
 end module tree_functions_mod
 
 module tree_insertion_mod
@@ -312,6 +299,7 @@ contains
     type(node), pointer, intent(inout) :: part 
     type(node), pointer :: cn
     type(node), pointer :: next_cn
+    type(node), pointer :: cn_parent
     
     logical :: insertion ! True if new part inserted into tree 
     logical :: inside    ! T/F result from A in B query
@@ -330,38 +318,33 @@ contains
             cn=>cn%fchild
             insertion=.false.
          else
-           CALL part_in_cn(cn, part, insertion)
+            CALL insert_node(part, cn)
+          ! CALL part_in_cn(cn, part, insertion)
            insertion=.true.
          endif
          
-       elseif ( is_A_in_B(cn, part) .eqv. .true. ) then
-           next_cn=>cn%rsib 
-           write(*,*) 'cn is ', cn%id
-           CALL extract_node(cn,part)
-           write(*,*) 'part, part%p, part%p%fc', part%id,&
-              part%parent%id, part%parent%fchild%id
-           write(*,*) 'cn%par rels', cn%id, &
-                        cn%parent%fchild%id, cn%parent%lchild%id
-           CALL insert_node(cn,part)
-           write(*,*)'after insert,part,part%p%fc, part%p%lc',&
-               part%id, part%parent%fchild%id,  part%parent%lchild%id
-          ! CALL cn_in_part(cn, part, insertion)
-           insertion=.true.
-           if (associated(next_cn)) then
-             cn=>next_cn
-             insertion=.false.
-           end if
-          write(*,*) 'after cn in part stuff, next_cn,cn', &
-                      next_cn%id, cn%id
        else
-         if (associated(cn%rsib)) then
-           cn=>cn%rsib
+         next_cn=>cn%rsib
+         cn_parent=>cn%parent
+  
+         if  ( is_A_in_B(cn, part) .eqv. .true. ) then
+             write(*,*) 'cn is ', cn%id
+             CALL extract_node(cn)
+             CALL insert_node(cn,part)
+             CALL print_tree(part)
+         end if
+         
+         if (associated(next_cn)) then
+           cn=>next_cn
            insertion=.false.
          else
-           CALL cn_part_siblings(cn, part, insertion)
+           CALL insert_node(part,cn_parent)
            insertion=.true.
          end if
-       endif
+ 
+         write(*,*) 'after cn in part stuff, next_cn,cn', &
+                      next_cn%id, cn%id
+         endif
 
     call print_tree(head)
        
@@ -399,9 +382,9 @@ integer :: ios ! input/output status
 
 character(len=80) :: filename   ! name geometry file
 
-write(*,*) "this is what i like"
+write(*,*) "H2P"
 
-filename="nested_vol_2.h5m"
+filename="nested_vol.h5m"
 
 call dagmcinit(filename//char(0),len_trim(filename)) ! setup DAG problem
 
@@ -421,7 +404,7 @@ write (*,*) 'The number of volumes is', vols
 allocate (volume_surfpoints(vols,3))
 
 ! open the file containing the centroids
-open (unit=20,file='vol_surf_points_2.txt', status='old', &
+open (unit=20,file='vol_surf_points.txt', status='old', &
       err=20, iostat=ios)
 
 do i=1, vols-1
@@ -445,7 +428,7 @@ end do
 
 call print_tree(head)
 
-!call write_tree(head,vols-1)
+call write2graph(head)
 
 stop
 
