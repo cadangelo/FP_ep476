@@ -33,11 +33,17 @@ LDRFLAGS =
 
 # External library paths and libraries can be listed here.
 
-LIBDIR1 = $(HOME)/Documents/ep476/FinalProject/FP_ep476 
+LIBDIR1 = $(HOME)/tmp/FP_ep476 
 LIB1 = tree
 
-MOABDIR = /filespace/groups/cnerg/opt/MOAB/shared-cubit-c12/lib/
-MOABINC = /filespace/groups/cnerg/opt/MOAB/shared-cubit-c12/include/
+MOABDIR = /home/wilsonp/.local/moab/4.6.2_nocgm
+include $(MOABDIR)/lib/moab.make
+CPPFLAGS_DBG = $(MOAB_INCLUDES)
+DAGMC_LIBS = $(MOAB_LIBS_LINK) -ldagmc -lstdc++ -lMOAB
+
+# MOABDIR = /filespace/groups/cnerg/opt/MOAB/shared-cubit-c12/lib/
+# MOABINC = /filespace/groups/cnerg/opt/MOAB/shared-cubit-c12/include/
+# MOABINC = $(MOABDIR)/include
 MOABLIB = MOAB 
 DAGLIB = dagmc
 
@@ -47,9 +53,9 @@ DAGLIB = dagmc
 # needed to build the executable.  The "\" signifies
 # that the line is continued.
 OBJS = tree_data_mod.o volume_data_mod.o \
-       volume_functions_mod.o  \
-       print_tree.o #write_tree.o #insert_in_tree.o  
-CPP_OBJS = idagmc
+       volume_functions_mod.o
+       #print_tree.o #write_tree.o #insert_in_tree.o  
+CPP_OBJS = idagmc.o
 DRIVERS = tree_driver
 
 # This is a module-list macro.
@@ -65,13 +71,15 @@ all : clean tree_driver
 # Note that $(macro) evaluates a macro or an environment variable,
 # and the list of commands or rules follow the dependency.
 
-tree_driver : library
+tree_driver : $(OBJS) $(CPP_OBJS)
 	@echo "Creating "$@" in directory "$(PWD)"."
-	$(FLDR) $(FFLAGS_DBG) -o $@ $(DRIVERS).f90 $(OBJS) $(CPP_OBJS).cpp -L$(LIBDIR1) -l$(LIB1) \
-      -L$(MOABDIR) -l$(MOABLIB) -l$(DAGLIB) -I$(MOABINC)
+	$(FLDR) $(FFLAGS_DBG) -o $@ $(DRIVERS).f90 $(OBJS) $(CPP_OBJS) \
+	$(DAGMC_LIBS)
+#   -L$(LIBDIR1) -l$(LIB1) \
+#      -L$(MOABDIR)/lib  -lMOAB -l$(MOABLIB)  -l$(DAGLIB) -I$(MOABDIR)/include -lstdc++
 
 
-library : $(MODS) $(OBJS) 
+library : $(MODS) $(OBJS) $(CPP_OBJS)
 	ar -r lib$(LIB1).a $(OBJS)
 	ranlib lib$(LIB1).a
 
