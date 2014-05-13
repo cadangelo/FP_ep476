@@ -25,9 +25,12 @@ extern "C" {
 
   void dagmcpoint_on_surf_(double *xxx, double *yyy, double *zzz, int *vol_idx);
 
-  /* Funtion to return the number of volumes
+  /* Function to return the number of volumes
    */
   int dagmc_num_vol_();
+
+  /* Function to return the ID of a volume based on its ordinal index */
+  int dagmc_vol_id_(int *vol_idx);
 
  
 
