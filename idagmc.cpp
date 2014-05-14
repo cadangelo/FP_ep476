@@ -1,6 +1,7 @@
 #include "idagmc.h"
 
 #include "MBInterface.hpp"
+#include "MBCore.hpp"
 
 #include "DagMC.hpp"
 using moab::DagMC;
@@ -35,20 +36,59 @@ void dagmcinit_(char *cfile, int *clen)
 
 }
 
-void dagmcpoint_on_surf_(double *xxx, double *yyy, double *zzz, int *vol_idx)
+void dagmcpoint_on_surf_(double *xxx, double *yyy, double *zzz, int *vol_id)
 {
-  // fire ray from point x,y,z to edge of sphere to get point on surface
-  double xyz[3]={*xxx,*yyy,*zzz};
-  double dir[3]={rand(),rand(),rand()};
-  MBEntityHandle vol = DAG->entity_by_index(3,*vol_idx);
-  MBEntityHandle next_surf; // next surface we cross
-  double next_dist;
-  MBErrorCode rval = DAG->ray_fire(vol, xyz, dir, next_surf, next_dist);
-//  next_dist = next_dist - 1.0e-6;
-  std::cout << "next_dst = " << next_dist << std::endl;
- *xxx += (dir[0]*next_dist);
- *yyy += (dir[1]*next_dist);
- *zzz += (dir[2]*next_dist);
+  MBEntityHandle vol = DAG->entity_by_id(3,*vol_id);
+  std::cout << "Looking for point on volume " << *vol_id << " with handle " << vol << std::endl;
+
+  double coords[3];
+  MBErrorCode rval;
+  MBRange children;
+  MBEntityHandle firstEnt;
+
+  /* get first child surface */
+  rval = DAG->moab_instance()->get_child_meshsets(vol,children);
+  if (MB_SUCCESS != rval) 
+    {
+      std::cerr << "DAGMC failed to get surfaces for volume " << vol_id << std::endl;
+      exit(EXIT_FAILURE);
+    }
+  firstEnt = children[0];
+  std::cout << "Got surface " << DAG->get_entity_id(firstEnt) << std::endl;
+
+  /* get first child curve */
+  rval = DAG->moab_instance()->get_child_meshsets(firstEnt,children);
+  if (MB_SUCCESS != rval)
+    {
+      std::cerr << "DAGMC Failed to get curve for surface " << DAG->get_entity_id(firstEnt) << std::endl;
+      exit(EXIT_FAILURE);
+    }
+  firstEnt = children[0];
+  std::cout << "Got curve " << DAG->get_entity_id(firstEnt) << std::endl;
+
+
+  /* get first child vertex */
+  rval = DAG->moab_instance()->get_child_meshsets(firstEnt,children);
+  if (MB_SUCCESS != rval)
+    {
+      std::cerr << "DAGMC Failed to get vertex for curve " << DAG->get_entity_id(firstEnt) << std::endl;
+      exit(EXIT_FAILURE);
+    }
+  firstEnt = children[0];
+  std::cout << "Got vertex " << DAG->get_entity_id(firstEnt) << std::endl;
+
+  /* get coordinate of first vertex */
+  rval = DAG->moab_instance()->get_coords(&firstEnt,1,coords);
+  if (MB_SUCCESS != rval)
+    {
+      std::cerr << "DAGMC Failed to get coordinates: " << DAG->get_entity_id(firstEnt) << std::endl;
+      //exit(EXIT_FAILURE);
+    }
+
+  *xxx = coords[0];
+  *yyy = coords[1];
+  *zzz = coords[2];
+  
 
 }
 
@@ -94,6 +134,12 @@ void dagmcchkcel_(double *xxx,double *yyy,double *zzz,int *vol_idx, int *result)
   }
 
 }
+
+int dagmc_vol_id_(int *vol_idx)
+{
+  return DAG->id_by_index(3,*vol_idx);
+}
+  
 
 int dagmc_num_vol_()
 {

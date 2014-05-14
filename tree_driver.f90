@@ -377,8 +377,10 @@ type(node), target  :: new_node ! next node to be inserted
 type(node), pointer :: tmp_node ! temporary node
 
 integer :: vols, dagmc_num_vol ! number of volumes in geometry 
-integer :: i
+integer :: dagmc_vol_id
+integer :: i, vol_id
 integer :: ios ! input/output status
+integer, dimension(6) :: vol_parse_order
 
 character(len=80) :: filename   ! name geometry file
 
@@ -415,12 +417,14 @@ do i=1, vols-1
 end do
 close (20)
 
-
+vol_parse_order = (/ 6, 2, 5, 3, 4, 1 /)
 
 do i=1, vols-1
 
  allocate(tmp_node)
- call create_node(i,tmp_node)
+ vol_id = dagmc_vol_id(vol_parse_order(i))
+ write(*,*) 'volume ', i, ' has id ', vol_id
+ call create_node(vol_id,tmp_node)
  write(*,*) 'new node, head', tmp_node%id,head%id
  call insert_in_tree(tmp_node, head)
 
