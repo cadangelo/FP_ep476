@@ -1,11 +1,8 @@
 module volume_functions_mod
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! This is a module that contains a function for checking if volume !
-! one volume, A, is contained inside another volume, B.             !                                           !
+! This is a module that contains a function for checking if 
+! one volume, A, is contained inside another volume, B.            
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  
-  
   use tree_data_mod
   use volume_data_mod
 
@@ -15,25 +12,28 @@ module volume_functions_mod
 
     type(node), pointer :: A
     type(node), pointer :: B
-    double precision  :: x, y, z
-    integer(iknd) :: inside
-    logical :: is_A_in_B
-    !integer(iknd)::ijk
-    write(*,*) 'A = ', A%id
-    write(*,*) 'B = ', B%id
+    double precision  :: x, y, z ! coordinated of point on surface of A
+    integer(iknd) :: inside ! either 1 or 0 is returned from dagmcchkcel
+                            ! 0= point is inside; 1=point is outside
+    logical :: is_A_in_B    ! T/F depending on result of inside
 
-
-    ! special case then inserting part into top of tree
-    if(B%id .eq. 100 )then
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   
+    ! Special case when inserting part into top of tree
+    ! All nodes are inside the head node (-1) so inside always =0
+    ! Otherwise, find a point on surface A and call dagmcchkcel
+    ! to find out if it is inside B.
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if(B%id .eq. -1 )then
        inside=0
     else  
       CALL find_point(A%id, x, y, z)
-           write(*,*) 'b4 dagchkcel A,B, point,inside',&
-                        A%id,B%id, x, y, z,inside
       CALL dagmcchkcel(x, y, z, B%id, inside)
-           write(*,*) 'A, point', A%id,B%id, x, y, z,inside
     endif
-
+ 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! If inside is 0, volume A is inside volume B
+    ! Otherwise, volume A is outside of volume B
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (inside .eq. 0) then
       is_A_in_B=.true.
     else
@@ -43,16 +43,6 @@ module volume_functions_mod
     
     end function is_A_in_B
   
-    subroutine find_point(A_id, x, y, z)
-   
-    integer, intent(in) :: A_id
-    double precision, intent(out) :: x, y, z
 
-    x=volume_surfpoints(A_id,1)
-    y=volume_surfpoints(A_id,2)
-    z=volume_surfpoints(A_id,3)
-    
-   
-    end subroutine find_point
 
 end module volume_functions_mod
