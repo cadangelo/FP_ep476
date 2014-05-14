@@ -1,5 +1,10 @@
 module tree_data_mod
-! type to define the nodes of the tree
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! This module defines a type, node.
+! Each node represents a different volume in the tree structure.
+! Each node may have all or a few of the following attributes:
+! parent, first child, last child, right sibling, left sibling, ID
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   implicit none
 
